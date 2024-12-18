@@ -32,6 +32,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 
+app.get('/api', function(req, res) {
+  res.header('Content-Type', 'application/json');
+  res.send(JSON.stringify({"organization": "Student Cyber Games"}));
+})
+
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));
