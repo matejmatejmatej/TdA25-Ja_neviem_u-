@@ -15,6 +15,7 @@ const db = new sqlite3.Database(path.join(__dirname, 'data','db.sqlite'));
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
+var gamesRouter = require('./routes/games');
 
 var app = express();
 
@@ -31,6 +32,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
+app.use(gamesRouter);
 
 app.get('/api', function(req, res) {
   res.header('Content-Type', 'application/json');
