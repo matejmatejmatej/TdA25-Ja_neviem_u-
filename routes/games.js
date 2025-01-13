@@ -3,28 +3,28 @@ var router = express.Router();
 
 const games = [];
 
-router.get('/games', function(request, response) {
+router.get('/api/v1/games', function(request, response) {
   response.json(games);
 });
 
-router.post('/games', function(request, response) {
+router.post('/api/v1/games', function(request, response) {
   const body = request.body;
 
   if (!body.name) {
     return response.status(400).json({
-      error: 'Name missing'
+      code: 400,
+      message: "Bad request: Name is required"
     });
   }
 
   const newGame = {
     "uuid": games.length + 1,
-    "createdAt": null,
+    "createdAt": 1,
+    "updatedAt": 1,
     "name": body.name,
-    "board": [
-      [
-        "…"
-      ]
-    ]
+    "difficulty": body.difficulty,
+    "gameState": "opening",
+    "board": body.board,
   };
 
   games.push(newGame);
