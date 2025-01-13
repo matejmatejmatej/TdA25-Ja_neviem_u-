@@ -7,6 +7,11 @@ router.get('/api/v1/games', function(request, response) {
   response.json(games);
 });
 
+router.get('/api/v1/games/:uuid', function(request, response) {
+  console.log(request.params.uuid);
+  response.json(games);
+});
+
 router.post('/api/v1/games', function(request, response) {
   const body = request.body;
 
