@@ -1,5 +1,9 @@
+const { uuid } = require('uuidv4');
+
 var express = require('express');
 var router = express.Router();
+
+// 
 
 const games = [];
 
@@ -23,7 +27,7 @@ router.post('/api/v1/games', function(request, response) {
   }
 
   const newGame = {
-    "uuid": games.length + 1,
+    "uuid": uuid(),
     "createdAt": 1,
     "updatedAt": 1,
     "name": body.name,
