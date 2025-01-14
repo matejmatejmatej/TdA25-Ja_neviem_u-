@@ -31,10 +31,11 @@
     <div id="board"></div>
     <p id="winner"></p>
     <p>UUID hry: <span id="gameUUID">-</span></p>
+    <p id="currentPlayer">Na rade je: ✖️</p> <!-- Zobrazenie aktuálneho hráča -->
 
     <script>
         let board = [];
-        let currentPlayer = '✖️';
+        let currentPlayer = '✖️'; // Začína X
         let gameOver = false;
         let gameUUID = null;
 
@@ -94,6 +95,7 @@
             currentPlayer = '✖️';
             gameOver = false;
             document.getElementById('winner').textContent = '';
+            document.getElementById('currentPlayer').textContent = `Na rade je: ${currentPlayer}`; // Nastavenie počiatočného hráča
             createBoard();
         }
 
@@ -128,6 +130,7 @@
                     gameOver = true;
                 } else {
                     currentPlayer = currentPlayer === '✖️' ? '⭕' : '✖️';
+                    document.getElementById('currentPlayer').textContent = `Na rade je: ${currentPlayer}`; // Aktualizovanie hráča
                 }
             }
         }
