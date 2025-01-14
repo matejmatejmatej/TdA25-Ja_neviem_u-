@@ -1,4 +1,4 @@
-const { uuid } = require('uuidv4');
+const { v4: uuidv4 } = require('uuid');
 
 var express = require('express');
 var router = express.Router();
@@ -12,8 +12,11 @@ router.get('/api/v1/games', function(request, response) {
 });
 
 router.get('/api/v1/games/:uuid', function(request, response) {
-  console.log(request.params.uuid);
-  response.json(games);
+  const game = games.find(g => g.uuid === request.params.uuid);
+  if (!game) {
+    return response.status(404).json({ code: 404, message: "Game not found" });
+  }
+  response.json(game);
 });
 
 router.post('/api/v1/games', function(request, response) {
@@ -27,7 +30,7 @@ router.post('/api/v1/games', function(request, response) {
   }
 
   const newGame = {
-    "uuid": uuid(),
+    "uuid": uuidv4(),
     "createdAt": 1,
     "updatedAt": 1,
     "name": body.name,
