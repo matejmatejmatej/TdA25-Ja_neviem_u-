@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PISKVORKY</title>
+    <!-- <link rel="stylesheet" href="/public/game/style.css"> -->
+    <title>Piškôrky</title>
     <style>
         #board {
             display: grid;
@@ -19,8 +20,37 @@
             align-items: center;
             justify-content: center;
             font-size: 24px;
-            border: 1px solid black;
+            border: 2px solid #b1b1b1;
             cursor: pointer;
+        }
+        body {
+        padding: 50px;
+        font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+        display: grid;
+        justify-content: center;
+        background-color: #1E2328;
+        }
+
+        a {
+        color: #00B7FF;
+        }
+        button, input 
+        {
+            margin-top: 10px;
+            border-radius: 30px;
+            background-color: #F5b301;
+            color: #1E2328;
+            padding-top: 5px;
+            padding-bottom: 5px;
+        }
+        p {
+            color: #b1b1b1;
+        }
+        .center {
+            text-align: center;
+        }
+        input[type="text"] {
+        text-align: center;
         }
     </style>
 </head>
@@ -30,8 +60,8 @@
     <button id="save">Uložiť hru</button>
     <div id="board"></div>
     <p id="winner"></p>
-    <p>UUID hry: <span id="gameUUID">-</span></p>
-    <p id="currentPlayer">Na rade je: ✖️</p> <!-- Zobrazenie aktuálneho hráča -->
+    <p class="center">UUID hry: <span id="gameUUID">-</span></p>
+    <p id="currentPlayer" class="center">Na rade je: ✖️</p> <!-- Zobrazenie aktuálneho hráča -->
 
     <script>
         let board = [];
