@@ -23,12 +23,16 @@ router.get('/api/v1/games/:uuid', function(request, response) {
 router.post('/api/v1/games', function(request, response) {
   const body = request.body;
 
+  // Ak názov hry nie je poskytnutý, vrátime chybu
   if (!body.name) {
     return response.status(400).json({
       code: 400,
       message: "Bad request: Name is required"
     });
   }
+
+  // Ak nie je poslané herné pole, nastavíme ho na prázdnu mriežku 15x15
+  const newBoard = body.board && body.board.length ? body.board : Array.from({ length: 15 }, () => Array(15).fill(''));
 
   const newGame = {
     uuid: uuidv4(),
@@ -37,7 +41,7 @@ router.post('/api/v1/games', function(request, response) {
     name: body.name,
     difficulty: body.difficulty || "normal",
     gameState: "opening",
-    board: body.board || [],
+    board: newBoard, // Priradíme vytvorené alebo poslané herné pole
   };
 
   games.push(newGame);
@@ -52,6 +56,13 @@ router.put('/api/v1/games/:uuid', function(request, response) {
   }
 
   const body = request.body;
+
+  // Ak je poslané nové herné pole, aktualizujeme ho
+  if (body.board) {
+    const updatedBoard = body.board.length ? body.board : Array.from({ length: 15 }, () => Array(15).fill(''));
+    game.board = updatedBoard;
+  }
+
   if (body.name !== undefined) game.name = body.name;
   if (body.difficulty !== undefined) game.difficulty = body.difficulty;
 

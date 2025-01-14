@@ -4,26 +4,165 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PISKVORKY</title>
+    <style>
+        #board {
+            display: grid;
+            grid-template-columns: repeat(15, 40px);
+            grid-template-rows: repeat(15, 40px);
+            gap: 2px;
+            margin-top: 20px;
+        }
+        .cell {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            border: 1px solid black;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-    <button id="create">vytvoriť hru</button>
+    <input type="text" id="gameName" placeholder="Zadajte názov hry">
+    <button id="create">Vytvoriť hru</button>
+    <button id="save">Uložiť hru</button>
+    <div id="board"></div>
+    <p id="winner"></p>
+    <p>UUID hry: <span id="gameUUID">-</span></p>
+
     <script>
+        let board = [];
+        let currentPlayer = '✖️';
+        let gameOver = false;
+        let gameUUID = null;
+
         document.getElementById('create').addEventListener('click', () => {
+            let gameName = document.getElementById('gameName').value.trim();
+            if (!gameName) {
+                gameName = 'Piškôrky';  // Prednastavený názov hry
+            }
+
+            // Inicializujeme prázdne pole 15x15
+            board = Array.from({ length: 15 }, () => Array(15).fill(""));
+
             fetch('/api/v1/games', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    name: 'Piskvorky'
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: gameName, board: board })
             })
             .then(response => response.json())
             .then(data => {
-                console.log(data);
-                // window.location.href = `/game/${data.id}`;
+                if (data.uuid) {
+                    gameUUID = data.uuid;
+                    document.getElementById('gameUUID').textContent = gameUUID;
+                    initializeGame();
+                } else {
+                    alert('Chyba pri získavaní UUID alebo prázdna odpoveď zo servera');
+                }
+            })
+            .catch(error => {
+                console.error('Chyba pri vytváraní hry:', error);
+                alert('Chyba pri vytváraní hry');
             });
         });
+
+        document.getElementById('save').addEventListener('click', () => {
+            if (!gameUUID) {
+                alert('Najprv vytvorte hru!');
+                return;
+            }
+
+            fetch(`/api/v1/games/${gameUUID}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ board: board })  // Ukladáme aktuálny stav hry
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Hra uložená', data);
+                alert('Hra bola uložená!');
+            })
+            .catch(error => {
+                console.error('Chyba pri ukladaní hry:', error);
+                alert('Chyba pri ukladaní hry');
+            });
+        });
+
+        function initializeGame() {
+            currentPlayer = '✖️';
+            gameOver = false;
+            document.getElementById('winner').textContent = '';
+            createBoard();
+        }
+
+        function createBoard() {
+            const boardElement = document.getElementById('board');
+            boardElement.innerHTML = '';
+            
+            for (let row = 0; row < 15; row++) {
+                for (let col = 0; col < 15; col++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+                    cell.addEventListener('click', handleMove);
+                    boardElement.appendChild(cell);
+                }
+            }
+        }
+
+        function handleMove(event) {
+            if (gameOver) return;
+            
+            const row = parseInt(event.target.dataset.row);
+            const col = parseInt(event.target.dataset.col);
+            
+            if (board[row][col] === "") {
+                board[row][col] = currentPlayer;
+                event.target.textContent = currentPlayer;
+                
+                if (checkWin(row, col)) {
+                    document.getElementById('winner').textContent = `Víťaz: ${currentPlayer}`;
+                    gameOver = true;
+                } else {
+                    currentPlayer = currentPlayer === '✖️' ? '⭕' : '✖️';
+                }
+            }
+        }
+
+        function checkWin(row, col) {
+            const directions = [
+                [1, 0], [0, 1], [1, 1], [1, -1]
+            ];
+            
+            for (let [dx, dy] of directions) {
+                let count = 1;
+                count += countDirection(row, col, dx, dy);
+                count += countDirection(row, col, -dx, -dy);
+                
+                if (count >= 5) return true;
+            }
+            return false;
+        }
+        
+        function countDirection(row, col, dx, dy) {
+            let count = 0;
+            let player = board[row][col];
+            
+            for (let i = 1; i < 5; i++) {
+                let r = row + i * dx;
+                let c = col + i * dy;
+                
+                if (r >= 0 && r < 15 && c >= 0 && c < 15 && board[r][c] === player) {
+                    count++;
+                } else {
+                    break;
+                }
+            }
+            return count;
+        }
     </script>
 </body>
 </html>
