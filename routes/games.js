@@ -5,28 +5,6 @@ var router = express.Router();
 // Simulovaná databáza hier v pamäti
 const games = [];
 
-// Funkcia na klasifikáciu stavu hry
-function classifyGameState(board) {
-  const flatBoard = board.flat();
-  const symbols = new Set(flatBoard.filter(cell => cell !== ''));
-
-  // Overenie neplatných symbolov
-  if (![...symbols].every(s => ['X', 'O'].includes(s))) {
-    return 'invalid';
-  }
-
-  // Overenie veľkosti mriežky
-  if (board.length !== 15 || board.some(row => row.length !== 15)) {
-    return 'invalid';
-  }
-
-  const filledCells = flatBoard.filter(cell => cell !== '').length;
-  
-  if (filledCells === 0) return 'opening';
-  if (filledCells < 30) return 'midgame';
-  return 'endgame';
-}
-
 // Získanie všetkých hier
 router.get('/api/v1/games', function(request, response) {
   response.json(games);
@@ -45,16 +23,16 @@ router.get('/api/v1/games/:uuid', function(request, response) {
 router.post('/api/v1/games', function(request, response) {
   const body = request.body;
 
+  // Ak názov hry nie je poskytnutý, vrátime chybu
   if (!body.name) {
-    return response.status(400).json({ code: 400, message: "Bad request: Name is required" });
+    return response.status(400).json({
+      code: 400,
+      message: "Bad request: Name is required"
+    });
   }
 
+  // Ak nie je poslané herné pole, nastavíme ho na prázdnu mriežku 15x15
   const newBoard = body.board && body.board.length ? body.board : Array.from({ length: 15 }, () => Array(15).fill(''));
-  const gameState = classifyGameState(newBoard);
-
-  if (gameState === 'invalid') {
-    return response.status(422).json({ code: 422, message: "Invalid game board" });
-  }
 
   const newGame = {
     uuid: uuidv4(),
@@ -62,15 +40,15 @@ router.post('/api/v1/games', function(request, response) {
     updatedAt: Date.now(),
     name: body.name,
     difficulty: body.difficulty || "normal",
-    gameState,
-    board: newBoard,
+    gameState: "opening",
+    board: newBoard, // Priradíme vytvorené alebo poslané herné pole
   };
 
   games.push(newGame);
   response.status(201).json(newGame);
 });
 
-// Aktualizácia existujúcej hry podľa UUID
+// **Aktualizácia existujúcej hry podľa UUID**
 router.put('/api/v1/games/:uuid', function(request, response) {
   const game = games.find(g => g.uuid === request.params.uuid);
   if (!game) {
@@ -79,26 +57,21 @@ router.put('/api/v1/games/:uuid', function(request, response) {
 
   const body = request.body;
 
+  // Ak je poslané nové herné pole, aktualizujeme ho
   if (body.board) {
     const updatedBoard = body.board.length ? body.board : Array.from({ length: 15 }, () => Array(15).fill(''));
-    const gameState = classifyGameState(updatedBoard);
-
-    if (gameState === 'invalid') {
-      return response.status(422).json({ code: 422, message: "Invalid game board" });
-    }
-
     game.board = updatedBoard;
-    game.gameState = gameState;
   }
 
   if (body.name !== undefined) game.name = body.name;
   if (body.difficulty !== undefined) game.difficulty = body.difficulty;
 
   game.updatedAt = Date.now();
+
   response.json(game);
 });
 
-// Vymazanie hry podľa UUID
+// **Vymazanie hry podľa UUID**
 router.delete('/api/v1/games/:uuid', function(request, response) {
   const index = games.findIndex(g => g.uuid === request.params.uuid);
   if (index === -1) {
@@ -106,10 +79,10 @@ router.delete('/api/v1/games/:uuid', function(request, response) {
   }
 
   games.splice(index, 1);
-  response.status(204).send();
+  response.status(204).send(); // 204 No Content
 });
 
-// Nový endpoint pre zobrazenie HTML stránky hry s mriežkou
+// **Nový endpoint pre zobrazenie HTML stránky hry s mriežkou**
 router.get('/game/:uuid', function(request, response) {
   const game = games.find(g => g.uuid === request.params.uuid);
   
@@ -117,6 +90,7 @@ router.get('/game/:uuid', function(request, response) {
     return response.status(404).send('<h1>Game not found</h1>');
   }
 
+  // Konverzia mriežky na HTML tabuľku
   const boardHtml = game.board.map(row => 
     `<tr>${row.map(cell => `<td>${cell || '&nbsp;'}</td>`).join('')}</tr>`
   ).join('');
@@ -128,7 +102,7 @@ router.get('/game/:uuid', function(request, response) {
             <style>
                 table { border-collapse: collapse; }
                 td { width: 30px; height: 30px; border: 1px solid black; text-align: center; }
-                body {
+                Body{
                 padding: 50px;
                 font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
                 display: grid;
@@ -138,6 +112,7 @@ router.get('/game/:uuid', function(request, response) {
                 }
             </style>
         </head>
+
         <body>
             <h1>Game: ${game.name}</h1>
             <p>Difficulty: ${game.difficulty}</p>
