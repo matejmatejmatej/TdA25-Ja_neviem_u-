@@ -10,11 +10,13 @@ function validateGame(game) {
   const validSymbols = ['X', 'O', ''];
   const board = game.board;
 
+  // Validácia veľkosti dosky
   if (board.length !== 15 || board.some(row => row.length !== 15)) {
     return { valid: false, message: "Invalid board size. The board must be 15x15." };
   }
 
   const flatBoard = board.flat();
+  // Validácia symbolov
   if (flatBoard.some(cell => !validSymbols.includes(cell))) {
     return { valid: false, message: "Invalid symbols on the board. Only 'X', 'O', and '' are allowed." };
   }
@@ -22,6 +24,7 @@ function validateGame(game) {
   const xCount = flatBoard.filter(cell => cell === 'X').length;
   const oCount = flatBoard.filter(cell => cell === 'O').length;
 
+  // Validácia počtu symbolov
   if (xCount !== oCount && xCount !== oCount + 1) {
     return { valid: false, message: "Invalid move sequence. 'X' must start and can only have one more move than 'O'." };
   }
