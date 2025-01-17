@@ -44,6 +44,18 @@ function classifyGameState(game) {
   }
 }
 
+function classifyGameState(game) {
+  const moves = game.board.flat().filter(cell => cell === 'X' || cell === 'O').length;
+
+  if (isEndgame(game.board)) {
+    return "endgame";
+  } else if (moves <= 5) {
+    return "opening";
+  } else {
+    return "midgame";
+  }
+}
+
 function isEndgame(board) {
   const directions = [
     [0, 1], [1, 0], [1, 1], [1, -1]
@@ -84,6 +96,7 @@ function isEndgame(board) {
 
   return false; // No winner or no full board, continue playing
 }
+
 
 function isEndgame(board) {
   const directions = [
