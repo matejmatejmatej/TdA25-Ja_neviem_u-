@@ -44,18 +44,6 @@ function classifyGameState(game) {
   }
 }
 
-function classifyGameState(game) {
-  const moves = game.board.flat().filter(cell => cell === 'X' || cell === 'O').length;
-
-  if (isEndgame(game.board)) {
-    return "endgame";
-  } else if (moves <= 5) {
-    return "opening";
-  } else {
-    return "midgame";
-  }
-}
-
 function isEndgame(board) {
   const directions = [
     [0, 1], [1, 0], [1, 1], [1, -1]
@@ -117,33 +105,64 @@ function isEndgame(board) {
     return count === 5;
   };
 
-  const isBlocked = (x, y, dx, dy, player) => {
-    let leftBlocked = false;
-    let rightBlocked = false;
+  const canCompleteSequence = (x, y, dx, dy, player) => {
+    let count = 0;
+    let emptyCount = 0;
+    let emptyPosition = null;
 
-    const checkCell = (nx, ny) => {
-      return nx < 0 || ny < 0 || nx >= 15 || ny >= 15 || (board[nx][ny] !== '' && board[nx][ny] !== player);
-    };
+    for (let i = 0; i < 5; i++) {
+      const nx = x + i * dx;
+      const ny = y + i * dy;
 
-    if (checkCell(x - dx, y - dy)) leftBlocked = true;
-    if (checkCell(x + 4 * dx + dx, y + 4 * dy + dy)) rightBlocked = true;
+      if (nx >= 0 && nx < 15 && ny >= 0 && ny < 15) {
+        if (board[nx][ny] === player) {
+          count++;
+        } else if (board[nx][ny] === '') {
+          emptyCount++;
+          if (!emptyPosition) emptyPosition = [nx, ny];
+        } else {
+          return false;
+        }
+      } else {
+        return false;
+      }
+    }
 
-    return leftBlocked && rightBlocked;
+    // Ak je sekvencia "4 symboly hráča a 1 prázdne pole"
+    return count === 4 && emptyCount === 1 ? emptyPosition : false;
   };
 
   for (let x = 0; x < 15; x++) {
     for (let y = 0; y < 15; y++) {
       if (board[x][y] === 'X' || board[x][y] === 'O') {
         for (const [dx, dy] of directions) {
-          if (isWinningSequence(x, y, dx, dy, board[x][y]) && !isBlocked(x, y, dx, dy, board[x][y])) {
-            return true;
+          if (isWinningSequence(x, y, dx, dy, board[x][y])) {
+            return true; // Nájdená výherná sekvencia
+          }
+        }
+      } else if (board[x][y] === '') {
+        for (const [dx, dy] of directions) {
+          for (const player of ['X', 'O']) {
+            const winningMove = canCompleteSequence(x, y, dx, dy, player);
+            if (winningMove) {
+              return true; // Hra môže byť ukončená v ďalšom ťahu
+            }
           }
         }
       }
     }
   }
-  return false;
+
+  // Skontrolovať, či nie sú voľné políčka
+  const isFull = board.flat().every(cell => cell !== '');
+
+  if (isFull) {
+    return true; // Hra skončila, doska je plná
+  }
+
+  return false; // Hra ešte pokračuje
 }
+
 
 // Endpointy
 
