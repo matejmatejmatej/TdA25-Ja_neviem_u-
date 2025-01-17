@@ -44,6 +44,60 @@ function classifyGameState(game) {
   }
 }
 
+function classifyGameState(game) {
+  const moves = game.board.flat().filter(cell => cell === 'X' || cell === 'O').length;
+
+  if (isEndgame(game.board)) {
+    return "endgame";
+  } else if (moves <= 5) {
+    return "opening";
+  } else {
+    return "midgame";
+  }
+}
+
+function isEndgame(board) {
+  const directions = [
+    [0, 1], [1, 0], [1, 1], [1, -1]
+  ];
+
+  const isWinningSequence = (x, y, dx, dy, player) => {
+    let count = 0;
+    for (let i = 0; i < 5; i++) {
+      const nx = x + i * dx;
+      const ny = y + i * dy;
+      if (nx >= 0 && nx < 15 && ny >= 0 && ny < 15 && board[nx][ny] === player) {
+        count++;
+      } else {
+        break;
+      }
+    }
+    return count === 5;
+  };
+
+  for (let x = 0; x < 15; x++) {
+    for (let y = 0; y < 15; y++) {
+      if (board[x][y] === 'X' || board[x][y] === 'O') {
+        for (const [dx, dy] of directions) {
+          if (isWinningSequence(x, y, dx, dy, board[x][y])) {
+            return true; // Found a winning sequence
+          }
+        }
+      }
+    }
+  }
+
+  // Check if there are any remaining empty spaces
+  const isFull = board.flat().every(cell => cell !== '');
+
+  if (isFull) {
+    return true; // No empty spaces, game must be over
+  }
+
+  return false; // No winner or no full board, continue playing
+}
+
+
 function isEndgame(board) {
   const directions = [
     [0, 1], [1, 0], [1, 1], [1, -1]
@@ -79,7 +133,7 @@ function isEndgame(board) {
 
   for (let x = 0; x < 15; x++) {
     for (let y = 0; y < 15; y++) {
-      if (board[x][y] === 'X' || board[y][y] === 'O') {
+      if (board[x][y] === 'X' || board[x][y] === 'O') {
         for (const [dx, dy] of directions) {
           if (isWinningSequence(x, y, dx, dy, board[x][y]) && !isBlocked(x, y, dx, dy, board[x][y])) {
             return true;
