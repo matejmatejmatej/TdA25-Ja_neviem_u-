@@ -5,59 +5,97 @@ var router = express.Router();
 // Simulovaná databáza hier v pamäti
 const games = [];
 
-// Funkcia na validáciu herného poľa
-function isValidBoard(board) {
-  if (!Array.isArray(board) || board.length !== 15 || board.some(row => !Array.isArray(row) || row.length !== 15)) {
-    return false;
+// Pomocné funkcie na validáciu a klasifikáciu
+function validateGame(game) {
+  const validSymbols = ['X', 'O', ''];
+  const board = game.board;
+
+  if (board.length !== 15 || board.some(row => row.length !== 15)) {
+    return { valid: false, message: "Invalid board size. The board must be 15x15." };
   }
-  return board.flat().every(cell => ['X', 'O', ''].includes(cell));
-}
 
-// Funkcia na určenie stavu hry
-function determineGameState(game) {
-  const moves = game.board.flat().filter(cell => cell !== '').length;
-  if (moves <= 5) return "opening";
-  if (checkEndgame(game.board)) return "endgame";
-  return "midgame";
-}
-
-// Funkcia na kontrolu koncovky
-function checkEndgame(board) {
-  for (let i = 0; i < 15; i++) {
-    for (let j = 0; j < 15; j++) {
-      if (checkWin(board, i, j)) return true;
-    }
+  const flatBoard = board.flat();
+  if (flatBoard.some(cell => !validSymbols.includes(cell))) {
+    return { valid: false, message: "Invalid symbols on the board. Only 'X', 'O', and '' are allowed." };
   }
-  return false;
+
+  const xCount = flatBoard.filter(cell => cell === 'X').length;
+  const oCount = flatBoard.filter(cell => cell === 'O').length;
+
+  if (xCount !== oCount && xCount !== oCount + 1) {
+    return { valid: false, message: "Invalid move sequence. 'X' must start and can only have one more move than 'O'." };
+  }
+
+  return { valid: true };
 }
 
-// Funkcia na overenie výhry
-function checkWin(board, row, col) {
-  const player = board[row][col];
-  if (player === '') return false;
+function classifyGameState(game) {
+  const moves = game.board.flat().filter(cell => cell === 'X' || cell === 'O').length;
 
+  if (isEndgame(game.board)) {
+    return "endgame";
+  } else if (moves <= 5) {
+    return "opening";
+  } else {
+    return "midgame";
+  }
+}
+
+function isEndgame(board) {
   const directions = [
-    [1, 0], [0, 1], [1, 1], [1, -1]
+    [0, 1], [1, 0], [1, 1], [1, -1]
   ];
-  for (const [dx, dy] of directions) {
-    let count = 1;
-    for (let step = 1; step < 5; step++) {
-      const x = row + dx * step;
-      const y = col + dy * step;
-      if (x < 0 || x >= 15 || y < 0 || y >= 15 || board[x][y] !== player) break;
-      count++;
+
+  const isWinningSequence = (x, y, dx, dy, player) => {
+    let count = 0;
+    for (let i = 0; i < 5; i++) {
+      const nx = x + i * dx;
+      const ny = y + i * dy;
+      if (nx >= 0 && nx < 15 && ny >= 0 && ny < 15 && board[nx][ny] === player) {
+        count++;
+      } else {
+        break;
+      }
     }
-    if (count === 5) return true;
+    return count === 5;
+  };
+
+  const isBlocked = (x, y, dx, dy, player) => {
+    let leftBlocked = false;
+    let rightBlocked = false;
+
+    const checkCell = (nx, ny) => {
+      return nx < 0 || ny < 0 || nx >= 15 || ny >= 15 || (board[nx][ny] !== '' && board[nx][ny] !== player);
+    };
+
+    if (checkCell(x - dx, y - dy)) leftBlocked = true;
+    if (checkCell(x + 4 * dx + dx, y + 4 * dy + dy)) rightBlocked = true;
+
+    return leftBlocked && rightBlocked;
+  };
+
+  for (let x = 0; x < 15; x++) {
+    for (let y = 0; y < 15; y++) {
+      if (board[x][y] === 'X' || board[x][y] === 'O') {
+        for (const [dx, dy] of directions) {
+          if (isWinningSequence(x, y, dx, dy, board[x][y]) && !isBlocked(x, y, dx, dy, board[x][y])) {
+            return true;
+          }
+        }
+      }
+    }
   }
   return false;
 }
+
+// Endpointy
 
 // Získanie všetkých hier
 router.get('/api/v1/games', function(request, response) {
   response.json(games);
 });
 
-// Získanie konkrétnej hry podľa UUID
+// Získanie konkrétnej hry
 router.get('/api/v1/games/:uuid', function(request, response) {
   const game = games.find(g => g.uuid === request.params.uuid);
   if (!game) {
@@ -71,10 +109,14 @@ router.post('/api/v1/games', function(request, response) {
   const body = request.body;
 
   if (!body.name) {
-    return response.status(400).json({ code: 400, message: "Bad request: Name is required" });
+    return response.status(400).json({
+      code: 400,
+      message: "Bad request: Name is required"
+    });
   }
 
-  const newBoard = body.board && isValidBoard(body.board) ? body.board : Array.from({ length: 15 }, () => Array(15).fill(''));
+  const newBoard = body.board && body.board.length ? body.board : Array.from({ length: 15 }, () => Array(15).fill(''));
+
   const newGame = {
     uuid: uuidv4(),
     createdAt: Date.now(),
@@ -84,12 +126,21 @@ router.post('/api/v1/games', function(request, response) {
     board: newBoard,
   };
 
-  newGame.gameState = determineGameState(newGame);
+  const validation = validateGame(newGame);
+  if (!validation.valid) {
+    return response.status(422).json({
+      code: 422,
+      message: validation.message
+    });
+  }
+
+  newGame.gameState = classifyGameState(newGame);
+
   games.push(newGame);
   response.status(201).json(newGame);
 });
 
-// Aktualizácia existujúcej hry podľa UUID
+// Aktualizácia hry
 router.put('/api/v1/games/:uuid', function(request, response) {
   const game = games.find(g => g.uuid === request.params.uuid);
   if (!game) {
@@ -97,70 +148,22 @@ router.put('/api/v1/games/:uuid', function(request, response) {
   }
 
   const body = request.body;
-  if (body.board && !isValidBoard(body.board)) {
-    return response.status(422).json({ code: 422, message: "Invalid board format" });
+
+  if (body.board) {
+    const validation = validateGame({ board: body.board });
+    if (!validation.valid) {
+      return response.status(422).json({ code: 422, message: validation.message });
+    }
+    game.board = body.board;
   }
-  if (body.board) game.board = body.board;
+
   if (body.name !== undefined) game.name = body.name;
   if (body.difficulty !== undefined) game.difficulty = body.difficulty;
 
   game.updatedAt = Date.now();
-  game.gameState = determineGameState(game);
+  game.gameState = classifyGameState(game);
 
   response.json(game);
-});
-
-// Vymazanie hry podľa UUID
-router.delete('/api/v1/games/:uuid', function(request, response) {
-  const index = games.findIndex(g => g.uuid === request.params.uuid);
-  if (index === -1) {
-    return response.status(404).json({ code: 404, message: "Game not found" });
-  }
-
-  games.splice(index, 1);
-  response.status(204).send();
-});
-
-// Endpoint pre HTML zobrazenie hry
-router.get('/game/:uuid', function(request, response) {
-  const game = games.find(g => g.uuid === request.params.uuid);
-  
-  if (!game) {
-    return response.status(404).send('<h1>Game not found</h1>');
-  }
-
-  const boardHtml = game.board.map(row => 
-    `<tr>${row.map(cell => `<td>${cell || '&nbsp;'}</td>`).join('')}</tr>`
-  ).join('');
-
-  response.send(`
-    <html>
-        <head>
-            <title>${game.name}</title>
-            <style>
-                table { border-collapse: collapse; }
-                td { width: 30px; height: 30px; border: 1px solid black; text-align: center; }
-                body {
-                    padding: 50px;
-                    font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
-                    display: grid;
-                    justify-content: center;
-                    background-color: #1E2328;
-                    color: #b1b1b1;
-                }
-            </style>
-        </head>
-        <body>
-            <h1>Game: ${game.name}</h1>
-            <p>Difficulty: ${game.difficulty}</p>
-            <p>State: ${game.gameState}</p>
-            <p>Created At: ${new Date(game.createdAt).toLocaleString()}</p>
-            <p>Updated At: ${new Date(game.updatedAt).toLocaleString()}</p>
-            <h2>Board:</h2>
-            <table>${boardHtml}</table>
-        </body>
-    </html>
-  `);
 });
 
 module.exports = router;
