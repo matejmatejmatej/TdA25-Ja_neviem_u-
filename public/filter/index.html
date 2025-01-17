@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seznam úloh</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+        }
+        .filters {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .filter {
+            margin-right: 10px;
+        }
+        .tasks {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .task-card {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            width: 200px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .task-card h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+        .task-card p {
+            font-size: 14px;
+        }
+        .task-card button {
+            margin-top: 10px;
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .task-card button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Seznam úloh</h1>
+
+    <!-- Filters -->
+    <div class="filters">
+        <div class="filter">
+            <label for="difficulty">Obtížnost:</label>
+            <select id="difficulty">
+                <option value="">Všechny</option>
+                <option value="easy">Začátečník</option>
+                <option value="normal">Jednoduchá</option>
+                <option value="hard">Pokročilá</option>
+                <option value="very-hard">Těžká</option>
+                <option value="extreme">Nejtěžší</option>
+            </select>
+        </div>
+        <div class="filter">
+            <label for="name">Název úlohy:</label>
+            <input type="text" id="name" placeholder="Hledat podle názvu">
+        </div>
+        <div class="filter">
+            <label for="last-modified">Datum poslední úpravy:</label>
+            <select id="last-modified">
+                <option value="">Všechny</option>
+                <option value="24h">Poslední 24 hodin</option>
+                <option value="7d">Poslední týden</option>
+                <option value="1m">Poslední měsíc</option>
+                <option value="3m">Poslední 3 měsíce</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Task Cards -->
+    <div class="tasks" id="task-list">
+        <!-- Task cards will be inserted here dynamically -->
+    </div>
+</div>
+
+<script>
+    const taskList = document.getElementById('task-list');
+    let games = []; // This will hold the games fetched from the backend
+
+    // Sample fetch from backend API
+    async function fetchGames() {
+        const response = await fetch('http://your-api-url/api/v1/games');
+        if (response.ok) {
+            games = await response.json();
+            displayTasks(games);
+        } else {
+            console.error('Failed to fetch games');
+        }
+    }
+
+    // Display tasks based on current data
+    function displayTasks(tasks) {
+        taskList.innerHTML = ''; // Clear current list
+        tasks.forEach(task => {
+            const taskCard = document.createElement('div');
+            taskCard.classList.add('task-card');
+            taskCard.innerHTML = `
+                <h3>${task.name}</h3>
+                <p>Obtížnost: ${task.difficulty}</p>
+                <p>Stav: ${task.gameState}</p>
+                <p>Upraveno: ${new Date(task.updatedAt).toLocaleString()}</p>
+                <button onclick="startGame('${task.uuid}')">Spustit</button>
+                <button onclick="editGame('${task.uuid}')">Upravit</button>
+            `;
+            taskList.appendChild(taskCard);
+        });
+    }
+
+    // Start game action
+    function startGame(uuid) {
+        window.location.href = `http://your-api-url/game/${uuid}`;
+    }
+
+    // Edit game action
+    function editGame(uuid) {
+        window.location.href = `http://your-api-url/game/${uuid}/edit`;
+    }
+
+    // Filter tasks
+    function filterTasks() {
+        let filteredGames = games;
+
+        const difficulty = document.getElementById('difficulty').value;
+        const name = document.getElementById('name').value.toLowerCase();
+        const lastModified = document.getElementById('last-modified').value;
+
+        if (difficulty) {
+            filteredGames = filteredGames.filter(game => game.difficulty === difficulty);
+        }
+
+        if (name) {
+            filteredGames = filteredGames.filter(game => game.name.toLowerCase().includes(name));
+        }
+
+        if (lastModified) {
+            const now = new Date();
+            const timeFilter = {
+                '24h': 24 * 60 * 60 * 1000,
+                '7d': 7 * 24 * 60 * 60 * 1000,
+                '1m': 30 * 24 * 60 * 60 * 1000,
+                '3m': 90 * 24 * 60 * 60 * 1000,
+            };
+            const cutoffTime = now - timeFilter[lastModified];
+            filteredGames = filteredGames.filter(game => new Date(game.updatedAt) >= cutoffTime);
+        }
+
+        displayTasks(filteredGames);
+    }
+
+    // Attach filter listeners
+    document.getElementById('difficulty').addEventListener('change', filterTasks);
+    document.getElementById('name').addEventListener('input', filterTasks);
+    document.getElementById('last-modified').addEventListener('change', filterTasks);
+
+    // Initial fetch on page load
+    fetchGames();
+</script>
+
+</body>
+</html>
